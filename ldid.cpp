@@ -2700,25 +2700,36 @@ Bundle Sign(const std::string &root, Folder &folder, const std::string &key, std
                 };
 
                 uint8_t bytes[8];
+                uint filetype;
             } header;
 
             auto size(most(data, &header.bytes, sizeof(header.bytes)));
 
-            if (name != "_WatchKitStub/WK" && size == sizeof(header.bytes))
+            if (name != "_WatchKitStub/WK" && size == sizeof(header.bytes)) {
                 switch (Swap(header.magic)) {
                     case FAT_MAGIC:
                         // Java class file format
                         if (Swap(header.count) >= 40)
-                            break;
-                    case FAT_CIGAM:
+                            return;
+                        break;
                     case MH_MAGIC: case MH_MAGIC_64:
+                        // Skip object files
+                        if (header.filetype == MH_OBJECT)
+                            return;
+                        break;
                     case MH_CIGAM: case MH_CIGAM_64:
-                        folder.Save(name, true, flag, fun([&](std::streambuf &save) {
-                            Slots slots;
-                            Sign(header.bytes, size, data, hash, save, identifier, "", "", key, slots, length, percent);
-                        }));
-                        return;
+                        // Skip object files (should we swap here?)
+                        if (Swap(header.filetype) == MH_OBJECT)
+                            return;
+                        break;
+                    case FAT_CIGAM:
+                        break;
                 }
+                folder.Save(name, true, flag, fun([&](std::streambuf &save) {
+                    Slots slots;
+                    Sign(header.bytes, size, data, hash, save, identifier, "", "", key, slots, length, percent);
+                }));
+            }
 
             folder.Save(name, false, flag, fun([&](std::streambuf &save) {
                 HashProxy proxy(hash, save);
