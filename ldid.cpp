@@ -2713,6 +2713,9 @@ Bundle Sign(const std::string &root, Folder &folder, const std::string &key, std
                     case FAT_CIGAM:
                     case MH_MAGIC: case MH_MAGIC_64:
                     case MH_CIGAM: case MH_CIGAM_64:
+                        // Skip object files
+                        if (Swap(mach_header_->filetype) == MH_OBJECT)
+                            break;
                         folder.Save(name, true, flag, fun([&](std::streambuf &save) {
                             Slots slots;
                             Sign(header.bytes, size, data, hash, save, identifier, "", "", key, slots, length, percent);
